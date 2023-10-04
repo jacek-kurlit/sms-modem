@@ -1,0 +1,2 @@
+[workspace]
+members = ["sms_api", "sms_cli"]
