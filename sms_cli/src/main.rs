@@ -1,12 +1,24 @@
+use clap::Parser;
+use sms_cli::args_parser::{self, Commands::Send};
+
 #[tokio::main]
 async fn main() {
-    let result = sms_api::send_sms("It works!", &["12345"]).await;
-    match result {
-        Ok(_) => {
-            println!("SMS sent successfully");
+    let args = args_parser::Cli::parse();
+    // println!("{:?}", args);
+    match args.command {
+        Send(send_args) => {
+            let result = sms_cli::sms_send::send_sms(send_args).await;
+            match result {
+                Ok(_) => {
+                    println!("Message sent");
+                }
+                Err(e) => {
+                    println!("Could not send message, Reason: {:?}", e);
+                }
+            }
         }
-        Err(e) => {
-            println!("Error sending SMS: {}", e);
+        _ => {
+            println!("Command not supported");
         }
     }
 }

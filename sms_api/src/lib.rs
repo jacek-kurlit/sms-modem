@@ -28,7 +28,10 @@ pub async fn send_sms(msg: &str, phone_numbers: &[&str]) -> Result<(), SmsError>
 
 fn create_client() -> Result<Client, SmsError> {
     let mut default_headers = reqwest::header::HeaderMap::new();
-    default_headers.insert("Referer", format!("{}/default.html", SERVICE_URL).parse().unwrap());
+    default_headers.insert(
+        "Referer",
+        format!("{}/default.html", SERVICE_URL).parse().unwrap(),
+    );
 
     Client::builder()
         .timeout(Duration::from_secs(10))
@@ -44,8 +47,12 @@ async fn send_single_sms(msg: &str, phone: &str, client: &Client) -> Result<(), 
 }
 
 async fn call_sms_send(msg: &&str, phone: &&str, client: &Client) -> Result<(), SmsError> {
-    let res = client.post(format!("{}/jrd/webapi?api=SendSMS", SERVICE_URL))
-        .json(&SendSmsRequest::new(msg.to_string(), vec![phone.to_string()]))
+    let res = client
+        .post(format!("{}/jrd/webapi?api=SendSMS", SERVICE_URL))
+        .json(&SendSmsRequest::new(
+            msg.to_string(),
+            vec![phone.to_string()],
+        ))
         .send()
         .await
         .map_err(|e| SmsError::NetworkError(e.to_string()))?;
@@ -59,7 +66,8 @@ const RETRY_DELAY: Duration = Duration::from_millis(500);
 async fn wait_until_sent(client: &Client) -> Result<(), SmsError> {
     let mut current_try = 0;
     while current_try < RETRY_COUNT {
-        let response = client.post(format!("{}/jrd/webapi?api=GetSendSMSResult", SERVICE_URL))
+        let response = client
+            .post(format!("{}/jrd/webapi?api=GetSendSMSResult", SERVICE_URL))
             .body(r#"{"jsonrpc":"2.0","method":"GetSendSMSResult","params":null,"id":"6.7"}"#)
             .send()
             .await
@@ -68,23 +76,34 @@ async fn wait_until_sent(client: &Client) -> Result<(), SmsError> {
             .await?
             .json::<GetSendSmsResultResponse>()
             .await?
-            .result.send_status;
+            .result
+            .send_status;
         if status_code == 2 {
             return Ok(());
         }
         tokio::time::sleep(RETRY_DELAY).await;
         current_try += 1;
     }
-    Err(SmsError::UnknownError("Service didn't confirmed successful send".into()))
+    Err(SmsError::UnknownError(
+        "Service didn't confirmed successful send".into(),
+    ))
 }
 
 async fn ensure_status_is_success(response: Response) -> Result<Response, SmsError> {
     let status = response.status();
-    if status.is_client_error() || status.is_server_error() {
-        let error_text = response.text().await.unwrap_or("Could not parse error response".into());
-        return Err(SmsError::InvalidResponse(status, error_text));
+    match status {
+        StatusCode::OK => Ok(response),
+        StatusCode::UNAUTHORIZED => Err(SmsError::InvalidResponse(status, "Unauthorized".into())),
+        StatusCode::NOT_FOUND => {
+            Err(SmsError::InvalidResponse(status, format!("We could not find service under url {}, make sure usb modem is connected and service is running", SERVICE_URL)))
+        }
+        _ => {
+            Err(SmsError::UnknownError(format!(
+                "Unexpected status code: {}",
+                status
+            )))
+        }
     }
-    Ok(response)
 }
 
 #[derive(Serialize, Debug)]
