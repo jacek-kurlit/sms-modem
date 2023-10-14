@@ -8,3 +8,5 @@ sms_api = { path = "../sms_api" }
 tokio = "1.32.0"
 clap = { version = "4.4", features = ["derive"] }
 
+[dev-dependencies]
+sms_api = { path = "../sms_api", features = ["sms_mock_api"] }
