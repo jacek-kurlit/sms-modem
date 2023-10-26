@@ -12,7 +12,7 @@ async fn main() {
     // println!("{:?}", args);
     match args.command {
         Contacts(command) => {
-            contacts::manage_contact(command);
+            contacts::manage_contact(command).await;
         }
         Send(send_args) => {
             sms_cli::sms_send::send_sms(send_args, SERVICE_URL).await;

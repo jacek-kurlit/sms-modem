@@ -1,7 +1,4 @@
-use sms_api::{
-    sms_mock_api::{self, mockito},
-    SmsError,
-};
+use sms_api::sms_mock_api::{self, mockito};
 use sms_cli::args_parser::{SendSmsArgs, SmsMessageArgs, SmsTargetArgs};
 
 #[tokio::test]
@@ -22,10 +19,9 @@ async fn should_send_sms_successfully() {
     };
 
     // when
-    let result = sms_cli::sms_send::send_sms(send_args, &server.url()).await;
+    sms_cli::sms_send::send_sms(send_args, &server.url()).await;
 
     // then
-    assert!(result.is_ok());
     mock_handler.assert_called();
 }
 
@@ -47,13 +43,16 @@ async fn should_fail_when_sending_sms() {
     };
 
     // when
-    let result = sms_cli::sms_send::send_sms(send_args, &server.url()).await;
+    sms_cli::sms_send::send_sms(send_args, &server.url()).await;
 
     // then
-    assert!(matches!(
-        result,
-        Err(SmsError::UnknownError(x)) if x ==
-            "Service didn't confirmed successful send"
-    ));
+    // FIXME: I have changed api and we do not return error now because evry method hndler know what to do with errors (tey just print it)
+    // Either we need single behaviour so that all handlers will return result and main function will print it
+    // or we keep it as it is
+    // assert!(matches!(
+    //     result,
+    //     Err(SmsError::UnknownError(x)) if x ==
+    //         "Service didn't confirmed successful send"
+    // ));
     mock_handler.assert_called();
 }

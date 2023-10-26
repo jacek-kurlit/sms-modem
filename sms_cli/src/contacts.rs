@@ -1,6 +1,7 @@
 use crate::args_parser::ContactsCommands;
+use sms_db::contacts_repo::*;
 
-pub fn manage_contact(cmd: ContactsCommands) {
+pub async fn manage_contact(cmd: ContactsCommands) {
     match cmd {
         ContactsCommands::Add {
             first_name,
@@ -8,13 +9,13 @@ pub fn manage_contact(cmd: ContactsCommands) {
             phone,
             alias,
         } => {
-            let result = add_user(first_name, surname_name, phone, alias);
+            let result = add_user(first_name, surname_name, phone, alias).await;
             display_action_message(result, "Contact added");
         }
         _ => {
             display_action_message(Err("Command not supported".to_string()), "");
         }
-    }
+    };
 }
 
 fn display_action_message(result: Result<(), String>, success_message: &str) {
@@ -24,7 +25,7 @@ fn display_action_message(result: Result<(), String>, success_message: &str) {
     };
 }
 
-fn add_user(
+async fn add_user(
     first_name: String,
     surname_name: String,
     phone: String,
@@ -34,5 +35,5 @@ fn add_user(
         "Adding contact with first_name: {}, surname_name: {}, phone: {}, alias: {:?}",
         first_name, surname_name, phone, alias
     );
-    Ok(())
+    add_contact(Contact::new(first_name, surname_name, phone, alias)).await
 }
