@@ -1,13 +1,7 @@
 use serde::{Deserialize, Serialize};
-use surrealdb::{sql::Thing, Surreal};
+use surrealdb::Surreal;
 
-use crate::repository;
-
-#[derive(Debug, Deserialize)]
-struct Record {
-    #[allow(dead_code)]
-    id: Thing,
-}
+use crate::{repository, AnyRecord};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Contact {
@@ -48,7 +42,7 @@ impl ContactRepository {
     }
     pub async fn add_contact(&self, contact: Contact) -> Result<(), String> {
         let id = contact.contact_name.clone();
-        let _: Option<Record> = self
+        let _: Option<AnyRecord> = self
             .db
             .create((CONTACT_TABLE, id))
             .content(contact)
@@ -58,7 +52,7 @@ impl ContactRepository {
     }
 
     pub async fn delete_contact(&self, contact_name: &str) -> Result<(), String> {
-        let _: Record = self
+        let _: AnyRecord = self
             .db
             .delete((CONTACT_TABLE, contact_name))
             .await

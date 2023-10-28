@@ -8,6 +8,7 @@ sms_api = { path = "../sms_api" }
 sms_db = { path = "../sms_db" }
 tokio = "1.32.0"
 clap = { version = "4.4", features = ["derive"] }
+prettytable-rs = "^0.10"
 
 [dev-dependencies]
 sms_api = { path = "../sms_api", features = ["sms_mock_api"] }

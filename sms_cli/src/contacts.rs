@@ -1,4 +1,5 @@
 use crate::{args_parser::ContactsCommands, contacts};
+use prettytable::row;
 use sms_db::contacts_repo::*;
 
 pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
@@ -98,27 +99,15 @@ async fn handle_update_contact(
 }
 
 fn render_contact_table(contacts: Vec<Contact>) -> String {
-    let mut table = format!(
-        "|{:^17}|{:^17}|{:^17}|{:^17}|\n",
-        "-----------------", "-----------------", "-----------------", "-----------------"
-    );
-    table.push_str(&format!(
-        "| {:^15} | {:^15} | {:^15} | {:^15} |\n",
-        "Contact name", "First name", "Surname name", "Phone"
-    ));
-    table.push_str(&format!(
-        "|{:^17}|{:^17}|{:^17}|{:^17}|\n",
-        "-----------------", "-----------------", "-----------------", "-----------------"
-    ));
+    let mut table = prettytable::Table::new();
+    table.add_row(row!["Contact Name", "First Name", "Surname Name", "Phone"]);
     for contact in contacts {
-        table.push_str(&format!(
-            "| {:^15} | {:^15} | {:^15} | {:^15} |\n",
-            contact.contact_name, contact.first_name, contact.surname_name, contact.phone
-        ));
-        table.push_str(&format!(
-            "|{:^17}|{:^17}|{:^17}|{:^17}|\n",
-            "-----------------", "-----------------", "-----------------", "-----------------"
-        ));
+        table.add_row(row![
+            contact.contact_name,
+            contact.first_name,
+            contact.surname_name,
+            contact.phone
+        ]);
     }
-    table
+    table.to_string()
 }
