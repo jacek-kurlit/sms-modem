@@ -27,16 +27,19 @@ pub enum ContactsCommands {
         first_name: String,
         surname_name: String,
         phone: String,
-        alias: Option<String>,
+        contact_name: Option<String>,
     },
     #[command(arg_required_else_help = true, about = "Delete contact")]
-    Delete { alias: String },
+    Delete { contact_name: String },
+    #[command(arg_required_else_help = true, about = "Get contact")]
+    Get { contact_name: String },
     #[command(arg_required_else_help = true, about = "Update contact")]
     Update {
-        alias: String,
+        contact_name: String,
         first_name: String,
         surname_name: String,
         phone: String,
+        new_contact_name: Option<String>
     },
     #[command(about = "List all contacts")]
     List,
@@ -68,6 +71,10 @@ pub enum TemplatesCommands {
     Create { alias: String, text: String },
     #[command(arg_required_else_help = true, about = "Delete template")]
     Delete { alias: String },
+    #[command(arg_required_else_help = true, about = "Get template")]
+    Get { alias: String },
+    #[command(arg_required_else_help = true, about = "Update template")]
+    Update { alias: String, text: String },
     #[command(about = "List all templates")]
     List,
 }

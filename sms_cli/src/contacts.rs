@@ -1,39 +1,132 @@
-use crate::args_parser::ContactsCommands;
+use crate::{args_parser::ContactsCommands, contacts};
 use sms_db::contacts_repo::*;
 
 pub async fn manage_contact(cmd: ContactsCommands) {
-    match cmd {
+    let result = match cmd {
         ContactsCommands::Add {
             first_name,
             surname_name,
             phone,
-            alias,
+            contact_name,
+        } => handle_add_contact(first_name, surname_name, phone, contact_name).await,
+        ContactsCommands::Delete { contact_name } => handle_delete_contact(contact_name).await,
+        ContactsCommands::Get { contact_name } => handle_get_contact(contact_name).await,
+        ContactsCommands::List => handle_list_contacts().await,
+        ContactsCommands::Update {
+            contact_name,
+            first_name,
+            surname_name,
+            phone,
+            new_contact_name,
         } => {
-            let result = add_user(first_name, surname_name, phone, alias).await;
-            display_action_message(result, "Contact added");
-        }
-        _ => {
-            display_action_message(Err("Command not supported".to_string()), "");
+            handle_update_contact(
+                contact_name,
+                first_name,
+                surname_name,
+                phone,
+                new_contact_name,
+            )
+            .await
         }
     };
+    display_action_message(result);
 }
 
-fn display_action_message(result: Result<(), String>, success_message: &str) {
+fn display_action_message(result: Result<String, String>) {
     match result {
-        Ok(_) => println!("{}", success_message),
+        Ok(message) => println!("{}", message),
         Err(e) => println!("Error while handling contacts, Reason: {:?}", e),
     };
 }
 
-async fn add_user(
+async fn handle_add_contact(
     first_name: String,
     surname_name: String,
     phone: String,
-    alias: Option<String>,
-) -> Result<(), String> {
+    contact_name: Option<String>,
+) -> Result<String, String> {
     println!(
-        "Adding contact with first_name: {}, surname_name: {}, phone: {}, alias: {:?}",
-        first_name, surname_name, phone, alias
+        "Adding contact with first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
+        first_name, surname_name, phone, contact_name
     );
-    add_contact(Contact::new(first_name, surname_name, phone, alias)).await
+    contacts::ContactRepository::new()
+        .await?
+        .add_contact(Contact::new(first_name, surname_name, phone, contact_name))
+        .await
+        .map(|_| "Contact added".to_string())
+}
+
+async fn handle_delete_contact(contact_name: String) -> Result<String, String> {
+    println!("Deleting contact with name: {}", contact_name);
+    contacts::ContactRepository::new()
+        .await?
+        .delete_contact(&contact_name)
+        .await
+        .map(|_| "Contact deleted".to_string())
+}
+
+async fn handle_get_contact(contact_name: String) -> Result<String, String> {
+    println!("Getting contact with name: {}", contact_name);
+    contacts::ContactRepository::new()
+        .await?
+        .get_contact(&contact_name)
+        .await?
+        .map(|contact| render_contact_table(vec![contact]))
+        .ok_or_else(|| format!("Contact with name: {} not found", contact_name))
+}
+
+async fn handle_list_contacts() -> Result<String, String> {
+    println!("Getting all contacts");
+    let contacts = contacts::ContactRepository::new()
+        .await?
+        .get_all_contacts()
+        .await?;
+    Ok(render_contact_table(contacts))
+}
+
+async fn handle_update_contact(
+    contact_name: String,
+    first_name: String,
+    surname_name: String,
+    phone: String,
+    new_contact_name: Option<String>,
+) -> Result<String, String> {
+    println!(
+        "Updating contact with name {} and setting fields to first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
+        contact_name,first_name, surname_name, phone, new_contact_name
+    );
+    contacts::ContactRepository::new()
+        .await?
+        .update_contact(
+            &contact_name,
+            Contact::new(first_name, surname_name, phone, new_contact_name),
+        )
+        .await
+        .map(|_| "Contact updated".to_string())
+}
+
+fn render_contact_table(contacts: Vec<Contact>) -> String {
+    let mut table = format!(
+        "|{:^17}|{:^17}|{:^17}|{:^17}|\n",
+        "-----------------", "-----------------", "-----------------", "-----------------"
+    );
+    table.push_str(&format!(
+        "| {:^15} | {:^15} | {:^15} | {:^15} |\n",
+        "Contact name", "First name", "Surname name", "Phone"
+    ));
+    table.push_str(&format!(
+        "|{:^17}|{:^17}|{:^17}|{:^17}|\n",
+        "-----------------", "-----------------", "-----------------", "-----------------"
+    ));
+    for contact in contacts {
+        table.push_str(&format!(
+            "| {:^15} | {:^15} | {:^15} | {:^15} |\n",
+            contact.contact_name, contact.first_name, contact.surname_name, contact.phone
+        ));
+        table.push_str(&format!(
+            "|{:^17}|{:^17}|{:^17}|{:^17}|\n",
+            "-----------------", "-----------------", "-----------------", "-----------------"
+        ));
+    }
+    table
 }

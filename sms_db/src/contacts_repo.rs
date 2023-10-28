@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::local::RocksDb, sql::Thing, Surreal};
+use surrealdb::{sql::Thing, Surreal};
+
+use crate::repository;
 
 #[derive(Debug, Deserialize)]
 struct Record {
@@ -7,12 +9,12 @@ struct Record {
     id: Thing,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Contact {
     pub first_name: String,
     pub surname_name: String,
     pub phone: String,
-    pub alias: String,
+    pub contact_name: String,
 }
 
 impl Contact {
@@ -20,35 +22,103 @@ impl Contact {
         first_name: String,
         surname_name: String,
         phone: String,
-        alias: Option<String>,
+        contact_name: Option<String>,
     ) -> Self {
-        let alias = alias.unwrap_or_else(|| format!("{} {}", first_name, surname_name));
+        let contact_name =
+            contact_name.unwrap_or_else(|| format!("{} {}", first_name, surname_name));
         Self {
             first_name,
             surname_name,
             phone,
-            alias,
+            contact_name,
         }
     }
 }
 
-pub async fn add_contact(contact: Contact) -> Result<(), String> {
-    println!("Adding contact");
-    //TODO: storage location should be moved to configuration
-    // probably db should be treated as a service that can be reused
-    let db = Surreal::new::<RocksDb>("~/rocksdb/sms_modem/test.db")
-        .await
-        .map_err(|e| format!("Could not connect to db {}", e))?;
-    db.use_ns("main")
-        .use_db("sms_db")
-        .await
-        .map_err(|e| format!("Could not use sms db {}", e))?;
-    // Create a new person with a random id
-    let created: Vec<Record> = db
-        .create("contact")
-        .content(contact)
-        .await
-        .map_err(|e| format!("Could not create contact table {}", e))?;
-    dbg!(created);
-    Ok(())
+const CONTACT_TABLE: &str = "contact";
+
+pub struct ContactRepository {
+    db: Surreal<surrealdb::engine::local::Db>,
+}
+
+impl ContactRepository {
+    pub async fn new() -> Result<Self, String> {
+        let db = repository::connect_to_db().await?;
+        Ok(Self { db })
+    }
+    pub async fn add_contact(&self, contact: Contact) -> Result<(), String> {
+        let id = contact.contact_name.clone();
+        let _: Option<Record> = self
+            .db
+            .create((CONTACT_TABLE, id))
+            .content(contact)
+            .await
+            .map_err(|e| format!("Could not create contact table {}", e))?;
+        Ok(())
+    }
+
+    pub async fn delete_contact(&self, contact_name: &str) -> Result<(), String> {
+        let _: Record = self
+            .db
+            .delete((CONTACT_TABLE, contact_name))
+            .await
+            .map_err(|e| {
+                format!(
+                    "Could not delete contact with name: {}, Reason: {}",
+                    contact_name, e
+                )
+            })?
+            .ok_or_else(|| {
+                format!(
+                    "Could not delete contact with name: {}, Reason: contact not found",
+                    contact_name
+                )
+            })?;
+        Ok(())
+    }
+
+    pub async fn get_contact(&self, contact_name: &str) -> Result<Option<Contact>, String> {
+        self.db
+            .select((CONTACT_TABLE, contact_name))
+            .await
+            .map_err(|e| {
+                format!(
+                    "Could not get contact with name: {}, Reason: {}",
+                    contact_name, e
+                )
+            })
+    }
+
+    pub async fn get_all_contacts(&self) -> Result<Vec<Contact>, String> {
+        self.db
+            .select(CONTACT_TABLE)
+            .await
+            .map_err(|e| format!("Could not get all contacts, Reason: {}", e))
+    }
+
+    pub async fn update_contact(&self, contact_name: &str, contact: Contact) -> Result<(), String> {
+        self.ensure_new_contact_name_does_not_exits(contact_name, &contact)
+            .await?;
+        self.delete_contact(contact_name).await?;
+        self.add_contact(contact).await?;
+        Ok(())
+    }
+
+    async fn ensure_new_contact_name_does_not_exits(
+        &self,
+        contact_name: &str,
+        updated_contact: &Contact,
+    ) -> Result<(), String> {
+        if contact_name != updated_contact.contact_name {
+            let persisted_contact = self.get_contact(&updated_contact.contact_name).await?;
+            if persisted_contact.is_some() {
+                return Err(format!(
+                    "Could not update contact {} to new values as contact with name: {} already exist",
+                    contact_name,
+                    &updated_contact.contact_name
+                ));
+            }
+        }
+        Ok(())
+    }
 }
