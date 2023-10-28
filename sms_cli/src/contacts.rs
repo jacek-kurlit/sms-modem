@@ -4,12 +4,12 @@ use sms_db::contacts_repo::*;
 
 pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
     match cmd {
-        ContactsCommands::Add {
+        ContactsCommands::Create {
             first_name,
             surname_name,
             phone,
             contact_name,
-        } => handle_add_contact(first_name, surname_name, phone, contact_name).await,
+        } => handle_create_contact(first_name, surname_name, phone, contact_name).await,
         ContactsCommands::Delete { contact_name } => handle_delete_contact(contact_name).await,
         ContactsCommands::Get { contact_name } => handle_get_contact(contact_name).await,
         ContactsCommands::List => handle_list_contacts().await,
@@ -32,21 +32,21 @@ pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
     }
 }
 
-async fn handle_add_contact(
+async fn handle_create_contact(
     first_name: String,
     surname_name: String,
     phone: String,
     contact_name: Option<String>,
 ) -> Result<String, String> {
     println!(
-        "Adding contact with first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
+        "Creating contact with first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
         first_name, surname_name, phone, contact_name
     );
     contacts::ContactRepository::new()
         .await?
         .add_contact(Contact::new(first_name, surname_name, phone, contact_name))
         .await
-        .map(|_| "Contact added".to_string())
+        .map(|_| "Contact created".to_string())
 }
 
 async fn handle_delete_contact(contact_name: String) -> Result<String, String> {

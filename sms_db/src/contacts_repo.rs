@@ -47,7 +47,7 @@ impl ContactRepository {
             .create((CONTACT_TABLE, id))
             .content(contact)
             .await
-            .map_err(|e| format!("Could not create contact table {}", e))?;
+            .map_err(|e| format!("Could not create contact {}", e))?;
         Ok(())
     }
 

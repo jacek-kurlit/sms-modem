@@ -23,7 +23,7 @@ pub enum Commands {
 #[derive(Debug, Subcommand)]
 pub enum ContactsCommands {
     #[command(arg_required_else_help = true, about = "Add new contact")]
-    Add {
+    Create {
         first_name: String,
         surname_name: String,
         phone: String,
@@ -39,7 +39,7 @@ pub enum ContactsCommands {
         first_name: String,
         surname_name: String,
         phone: String,
-        new_contact_name: Option<String>
+        new_contact_name: Option<String>,
     },
     #[command(about = "List all contacts")]
     List,
@@ -48,18 +48,20 @@ pub enum ContactsCommands {
 #[derive(Debug, Subcommand)]
 pub enum GroupsCommands {
     #[command(arg_required_else_help = true, about = "Create new group")]
-    Create { alias: String, name: String },
+    Create { name: String },
     #[command(arg_required_else_help = true, about = "Delete group")]
-    Delete { alias: String },
+    Delete { name: String },
+    #[command(arg_required_else_help = true, about = "Get group")]
+    Get { name: String },
     #[command(arg_required_else_help = true, about = "Assign concat to group")]
     Assign {
-        contact_alias: String,
-        group_alias: String,
+        contact_name: String,
+        group_name: String,
     },
     #[command(arg_required_else_help = true, about = "Unassign concat from group")]
     Unassign {
-        contact_alias: String,
-        group_alias: String,
+        contact_name: String,
+        group_name: String,
     },
     #[command(about = "List all groups")]
     List,
@@ -68,13 +70,13 @@ pub enum GroupsCommands {
 #[derive(Debug, Subcommand)]
 pub enum TemplatesCommands {
     #[command(arg_required_else_help = true, about = "Create new template")]
-    Create { alias: String, text: String },
+    Create { name: String, text: String },
     #[command(arg_required_else_help = true, about = "Delete template")]
-    Delete { alias: String },
+    Delete { name: String },
     #[command(arg_required_else_help = true, about = "Get template")]
-    Get { alias: String },
+    Get { name: String },
     #[command(arg_required_else_help = true, about = "Update template")]
-    Update { alias: String, text: String },
+    Update { name: String, text: String },
     #[command(about = "List all templates")]
     List,
 }

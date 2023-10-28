@@ -1,6 +1,8 @@
 use clap::Parser;
 use sms_cli::{
-    args_parser::{self, Commands::Contacts, Commands::Send, Commands::Templates},
+    args_parser::{
+        self, Commands::Contacts, Commands::Groups, Commands::Send, Commands::Templates,
+    },
     contacts,
 };
 
@@ -12,8 +14,8 @@ async fn main() {
     let result = match args.command {
         Contacts(command) => contacts::manage_contacts(command).await,
         Templates(commad) => sms_cli::templates::manage_templates(commad).await,
+        Groups(command) => sms_cli::groups::manage_groups(command).await,
         Send(send_args) => sms_cli::sms_send::send_sms(send_args, SERVICE_URL).await,
-        _ => Err("Command not supported".to_string()),
     };
     display_action_message(result);
 }

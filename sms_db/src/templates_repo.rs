@@ -5,13 +5,13 @@ use crate::{repository, AnyRecord};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Template {
-    pub alias: String,
+    pub name: String,
     pub text: String,
 }
 
 impl Template {
-    pub fn new(alias: String, text: String) -> Self {
-        Self { alias, text }
+    pub fn new(name: String, text: String) -> Self {
+        Self { name, text }
     }
 }
 
@@ -26,42 +26,43 @@ impl TemplateRepository {
         let db = repository::connect_to_db().await?;
         Ok(Self { db })
     }
+
     pub async fn add_template(&self, template: Template) -> Result<(), String> {
-        let id = template.alias.clone();
+        let id = template.name.clone();
         let _: Option<AnyRecord> = self
             .db
             .create((TEMPLATE_TABLE, id))
             .content(template)
             .await
-            .map_err(|e| format!("Could not create template table {}", e))?;
+            .map_err(|e| format!("Could not create template {}", e))?;
         Ok(())
     }
 
-    pub async fn delete_template(&self, alias: &str) -> Result<(), String> {
+    pub async fn delete_template(&self, name: &str) -> Result<(), String> {
         let _: AnyRecord = self
             .db
-            .delete((TEMPLATE_TABLE, alias))
+            .delete((TEMPLATE_TABLE, name))
             .await
             .map_err(|e| {
                 format!(
-                    "Could not delete template with alias: {}, Reason: {}",
-                    alias, e
+                    "Could not delete template with name: {}, Reason: {}",
+                    name, e
                 )
             })?
             .ok_or_else(|| {
                 format!(
-                    "Could not delete template with alias: {}, Reason: template not found",
-                    alias
+                    "Could not delete template with name: {}, Reason: template not found",
+                    name
                 )
             })?;
         Ok(())
     }
 
-    pub async fn get_template(&self, alias: &str) -> Result<Option<Template>, String> {
-        self.db.select((TEMPLATE_TABLE, alias)).await.map_err(|e| {
+    pub async fn get_template(&self, name: &str) -> Result<Option<Template>, String> {
+        self.db.select((TEMPLATE_TABLE, name)).await.map_err(|e| {
             format!(
-                "Could not get template with alias: {}, Reason: {}",
-                alias, e
+                "Could not get template with name: {}, Reason: {}",
+                name, e
             )
         })
     }
@@ -74,7 +75,7 @@ impl TemplateRepository {
     }
 
     pub async fn update_template(&self, template: Template) -> Result<(), String> {
-        self.delete_template(&template.alias).await?;
+        self.delete_template(&template.name).await?;
         self.add_template(template).await?;
         Ok(())
     }
