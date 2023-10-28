@@ -1,8 +1,8 @@
 use crate::{args_parser::ContactsCommands, contacts};
 use sms_db::contacts_repo::*;
 
-pub async fn manage_contact(cmd: ContactsCommands) {
-    let result = match cmd {
+pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
+    match cmd {
         ContactsCommands::Add {
             first_name,
             surname_name,
@@ -28,15 +28,7 @@ pub async fn manage_contact(cmd: ContactsCommands) {
             )
             .await
         }
-    };
-    display_action_message(result);
-}
-
-fn display_action_message(result: Result<String, String>) {
-    match result {
-        Ok(message) => println!("{}", message),
-        Err(e) => println!("Error while handling contacts, Reason: {:?}", e),
-    };
+    }
 }
 
 async fn handle_add_contact(

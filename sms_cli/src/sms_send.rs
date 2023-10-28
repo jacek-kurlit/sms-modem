@@ -2,26 +2,20 @@ use sms_api::SmsError;
 
 use crate::args_parser::SendSmsArgs;
 
-pub async fn send_sms(send_args: SendSmsArgs, service_url: &str) {
+pub async fn send_sms(send_args: SendSmsArgs, service_url: &str) -> Result<String, String> {
     let number = send_args
         .to
         .number
-        .expect("Currently only number is supported");
+        .ok_or_else(|| "Currently only number is supported".to_string())?;
     let message = send_args
         .message
         .plain
         .expect("Currently only plain message is supported");
 
-    let result = send(&message, &[&number], service_url).await;
-
-    match result {
-        Ok(_) => {
-            println!("Message sent");
-        }
-        Err(e) => {
-            println!("Could not send message, Reason: {:?}", e);
-        }
-    };
+    send(&message, &[&number], service_url)
+        .await
+        .map(|_| "Message sent".to_string())
+        .map_err(|e| format!("Could not send message, Reason: {:?}", e))
 }
 
 async fn send(message: &str, numbers: &[&str], service_url: &str) -> Result<(), SmsError> {
