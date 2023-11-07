@@ -1,5 +1,5 @@
 use prettytable::row;
-use sms_db::groups_repo::Group;
+use sms_db::{groups_repo::Group, RepositoriesManager};
 
 use crate::args_parser::GroupsCommands;
 
@@ -21,25 +21,28 @@ pub async fn manage_groups(cmd: GroupsCommands) -> Result<String, String> {
 }
 
 async fn handle_create_group(name: String) -> Result<String, String> {
-    sms_db::groups_repo::GroupRepository::new()
+    RepositoriesManager::new()
         .await?
-        .create_group(sms_db::groups_repo::Group::new(name))
+        .groups()
+        .create(sms_db::groups_repo::Group::new(name))
         .await
         .map(|_| "Group created successfully".to_string())
 }
 
 async fn handle_delete_group(name: String) -> Result<String, String> {
-    sms_db::groups_repo::GroupRepository::new()
+    RepositoriesManager::new()
         .await?
-        .delete_group(&name)
+        .groups()
+        .delete(&name)
         .await
         .map(|_| "Group deleted successfully".to_string())
 }
 
 async fn handle_get_group(name: String) -> Result<String, String> {
-    sms_db::groups_repo::GroupRepository::new()
+    RepositoriesManager::new()
         .await?
-        .get_group(&name)
+        .groups()
+        .get(&name)
         .await?
         .map(|group| render_group_table(vec![group]))
         .ok_or_else(|| format!("Group with name: {} not found", name))
@@ -56,27 +59,25 @@ fn render_group_table(groups: Vec<Group>) -> String {
 }
 
 async fn handle_list_groups() -> Result<String, String> {
-    sms_db::groups_repo::GroupRepository::new()
+    RepositoriesManager::new()
         .await?
-        .get_all_groups()
+        .groups()
+        .get_all()
         .await
         .map(render_group_table)
 }
 
 async fn handle_group_assign(contact_name: String, group_name: String) -> Result<String, String> {
-    let persisted_contact = sms_db::contacts_repo::ContactRepository::new()
-        .await?
-        .get_contact(&contact_name)
-        .await?;
+    let repository_manager = RepositoriesManager::new().await?;
+    let persisted_contact = repository_manager.contacts().get(&contact_name).await?;
     if persisted_contact.is_none() {
         return Err(format!(
             "Cannot add contact {} to group {}. Reason: Contact does not exists",
             contact_name, group_name
         ));
     }
-    //FIXME: We cannot have 2 repos working on the same db unless they share connection?
-    let group_repository = sms_db::groups_repo::GroupRepository::new().await?;
-    let persited_group = group_repository.get_group(&group_name).await?;
+    let group_repository = repository_manager.groups();
+    let persited_group = group_repository.get(&group_name).await?;
     if persited_group.is_none() {
         return Err(format!(
             "Cannot add contact {} to group {}. Reason: Group does not exists",
@@ -87,14 +88,14 @@ async fn handle_group_assign(contact_name: String, group_name: String) -> Result
     let mut persited_group = persited_group.unwrap();
     persited_group.assigned_contacts.push(contact_name);
     group_repository
-        .update_group(persited_group)
+        .update(persited_group)
         .await
         .map(|_| "Contact added to group successfully".to_string())
 }
 
 async fn handle_group_unassign(contact_name: String, group_name: String) -> Result<String, String> {
-    let group_repository = sms_db::groups_repo::GroupRepository::new().await?;
-    let persited_group = group_repository.get_group(&group_name).await?;
+    let group_repository = RepositoriesManager::new().await?.groups();
+    let persited_group = group_repository.get(&group_name).await?;
     if persited_group.is_none() {
         return Err(format!(
             "Cannot remove contact {} from group {}. Reason: Group does not exists",
@@ -112,7 +113,7 @@ async fn handle_group_unassign(contact_name: String, group_name: String) -> Resu
         .assigned_contacts
         .retain(|c| c != &contact_name);
     group_repository
-        .update_group(persited_group)
+        .update(persited_group)
         .await
         .map(|_| "Contact removed from group successfully".to_string())
 }

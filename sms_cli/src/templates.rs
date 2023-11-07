@@ -1,5 +1,5 @@
 use prettytable::row;
-use sms_db::templates_repo::{self, Template};
+use sms_db::{templates_repo::Template, RepositoriesManager};
 
 use crate::args_parser::TemplatesCommands;
 
@@ -14,34 +14,38 @@ pub async fn manage_templates(cmd: TemplatesCommands) -> Result<String, String> 
 }
 
 async fn handle_create_template(name: String, text: String) -> Result<String, String> {
-    templates_repo::TemplateRepository::new()
+    RepositoriesManager::new()
         .await?
-        .add_template(Template::new(name, text))
+        .templates()
+        .create(Template::new(name, text))
         .await
         .map(|_| "Template created successfully".to_string())
 }
 
 async fn handle_delete_template(name: String) -> Result<String, String> {
-    templates_repo::TemplateRepository::new()
+    RepositoriesManager::new()
         .await?
-        .delete_template(&name)
+        .templates()
+        .delete(&name)
         .await
         .map(|_| "Template deleted successfully".to_string())
 }
 
 async fn handle_get_template(name: String) -> Result<String, String> {
-    templates_repo::TemplateRepository::new()
+    RepositoriesManager::new()
         .await?
-        .get_template(&name)
+        .templates()
+        .get(&name)
         .await?
         .map(|template| render_templates_table(vec![template]))
         .ok_or_else(|| format!("Template with name {} not found", name))
 }
 
 async fn handle_list_templates() -> Result<String, String> {
-    templates_repo::TemplateRepository::new()
+    RepositoriesManager::new()
         .await?
-        .get_all_templates()
+        .templates()
+        .get_all()
         .await
         .map(render_templates_table)
 }
@@ -56,9 +60,10 @@ fn render_templates_table(templates: Vec<Template>) -> String {
 }
 
 async fn handle_update_template(name: String, text: String) -> Result<String, String> {
-    templates_repo::TemplateRepository::new()
+    RepositoriesManager::new()
         .await?
-        .update_template(Template::new(name, text))
+        .templates()
+        .update(Template::new(name, text))
         .await
         .map(|_| "Template updated successfully".to_string())
 }

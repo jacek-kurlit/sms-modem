@@ -1,7 +1,9 @@
-use serde::{Deserialize, Serialize};
-use surrealdb::Surreal;
+use std::rc::Rc;
 
-use crate::{repository, AnyRecord};
+use serde::{Deserialize, Serialize};
+use surrealdb::{engine::local::Db, Surreal};
+
+use crate::AnyRecord;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Contact {
@@ -32,15 +34,14 @@ impl Contact {
 const CONTACT_TABLE: &str = "contact";
 
 pub struct ContactRepository {
-    db: Surreal<surrealdb::engine::local::Db>,
+    db: Rc<Surreal<Db>>,
 }
 
 impl ContactRepository {
-    pub async fn new() -> Result<Self, String> {
-        let db = repository::connect_to_db().await?;
-        Ok(Self { db })
+    pub fn new(db_ref: Rc<Surreal<Db>>) -> Self {
+        Self { db: db_ref }
     }
-    pub async fn add_contact(&self, contact: Contact) -> Result<(), String> {
+    pub async fn create(&self, contact: Contact) -> Result<(), String> {
         let id = contact.contact_name.clone();
         let _: Option<AnyRecord> = self
             .db
@@ -51,7 +52,7 @@ impl ContactRepository {
         Ok(())
     }
 
-    pub async fn delete_contact(&self, contact_name: &str) -> Result<(), String> {
+    pub async fn delete(&self, contact_name: &str) -> Result<(), String> {
         let _: AnyRecord = self
             .db
             .delete((CONTACT_TABLE, contact_name))
@@ -71,7 +72,7 @@ impl ContactRepository {
         Ok(())
     }
 
-    pub async fn get_contact(&self, contact_name: &str) -> Result<Option<Contact>, String> {
+    pub async fn get(&self, contact_name: &str) -> Result<Option<Contact>, String> {
         self.db
             .select((CONTACT_TABLE, contact_name))
             .await
@@ -83,18 +84,18 @@ impl ContactRepository {
             })
     }
 
-    pub async fn get_all_contacts(&self) -> Result<Vec<Contact>, String> {
+    pub async fn get_all(&self) -> Result<Vec<Contact>, String> {
         self.db
             .select(CONTACT_TABLE)
             .await
             .map_err(|e| format!("Could not get all contacts, Reason: {}", e))
     }
 
-    pub async fn update_contact(&self, contact_name: &str, contact: Contact) -> Result<(), String> {
+    pub async fn update(&self, contact_name: &str, contact: Contact) -> Result<(), String> {
         self.ensure_new_contact_name_does_not_exits(contact_name, &contact)
             .await?;
-        self.delete_contact(contact_name).await?;
-        self.add_contact(contact).await?;
+        self.delete(contact_name).await?;
+        self.create(contact).await?;
         Ok(())
     }
 
@@ -104,7 +105,7 @@ impl ContactRepository {
         updated_contact: &Contact,
     ) -> Result<(), String> {
         if contact_name != updated_contact.contact_name {
-            let persisted_contact = self.get_contact(&updated_contact.contact_name).await?;
+            let persisted_contact = self.get(&updated_contact.contact_name).await?;
             if persisted_contact.is_some() {
                 return Err(format!(
                     "Could not update contact {} to new values as contact with name: {} already exist",

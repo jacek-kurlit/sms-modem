@@ -1,6 +1,6 @@
-use crate::{args_parser::ContactsCommands, contacts};
+use crate::args_parser::ContactsCommands;
 use prettytable::row;
-use sms_db::contacts_repo::*;
+use sms_db::{contacts_repo::*, RepositoriesManager};
 
 pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
     match cmd {
@@ -42,27 +42,31 @@ async fn handle_create_contact(
         "Creating contact with first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
         first_name, surname_name, phone, contact_name
     );
-    contacts::ContactRepository::new()
+    RepositoriesManager::new()
         .await?
-        .add_contact(Contact::new(first_name, surname_name, phone, contact_name))
+        .contacts()
+        .create(Contact::new(first_name, surname_name, phone, contact_name))
         .await
         .map(|_| "Contact created".to_string())
 }
 
 async fn handle_delete_contact(contact_name: String) -> Result<String, String> {
     println!("Deleting contact with name: {}", contact_name);
-    contacts::ContactRepository::new()
+    //FIXME: contact could have been assignted to group!
+    RepositoriesManager::new()
         .await?
-        .delete_contact(&contact_name)
+        .contacts()
+        .delete(&contact_name)
         .await
         .map(|_| "Contact deleted".to_string())
 }
 
 async fn handle_get_contact(contact_name: String) -> Result<String, String> {
     println!("Getting contact with name: {}", contact_name);
-    contacts::ContactRepository::new()
+    RepositoriesManager::new()
         .await?
-        .get_contact(&contact_name)
+        .contacts()
+        .get(&contact_name)
         .await?
         .map(|contact| render_contact_table(vec![contact]))
         .ok_or_else(|| format!("Contact with name: {} not found", contact_name))
@@ -70,9 +74,10 @@ async fn handle_get_contact(contact_name: String) -> Result<String, String> {
 
 async fn handle_list_contacts() -> Result<String, String> {
     println!("Getting all contacts");
-    let contacts = contacts::ContactRepository::new()
+    let contacts = RepositoriesManager::new()
         .await?
-        .get_all_contacts()
+        .contacts()
+        .get_all()
         .await?;
     Ok(render_contact_table(contacts))
 }
@@ -88,9 +93,12 @@ async fn handle_update_contact(
         "Updating contact with name {} and setting fields to first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
         contact_name,first_name, surname_name, phone, new_contact_name
     );
-    contacts::ContactRepository::new()
+    //FIXME: contact could have been assignted to group!
+    // instead of using contact name we should use db ids!
+    RepositoriesManager::new()
         .await?
-        .update_contact(
+        .contacts()
+        .update(
             &contact_name,
             Contact::new(first_name, surname_name, phone, new_contact_name),
         )
