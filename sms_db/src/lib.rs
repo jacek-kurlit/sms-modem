@@ -3,12 +3,14 @@ use std::rc::Rc;
 use contacts_repo::ContactRepository;
 use groups_repo::GroupRepository;
 use serde::Deserialize;
+use sms_repository::{SmsRepository, TestData};
 use surrealdb::{sql::Thing, Surreal};
 use templates_repo::TemplateRepository;
 
 pub mod contacts_repo;
 pub mod groups_repo;
 pub mod repository;
+pub mod sms_repository;
 pub mod templates_repo;
 
 #[derive(Debug, Deserialize)]
@@ -37,5 +39,9 @@ impl RepositoriesManager {
 
     pub fn templates(&self) -> TemplateRepository {
         TemplateRepository::new(self.db_ref.clone())
+    }
+
+    pub fn test(&self) -> SmsRepository<TestData> {
+        SmsRepository::new(self.db_ref.clone(), "test")
     }
 }

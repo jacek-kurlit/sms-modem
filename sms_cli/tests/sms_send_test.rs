@@ -19,7 +19,9 @@ async fn should_send_sms_successfully() {
     };
 
     // when
-    sms_cli::sms_send::send_sms(send_args, &server.url()).await;
+    sms_cli::sms_send::send_sms(send_args, &server.url())
+        .await
+        .expect("send_sms_successfully");
 
     // then
     mock_handler.assert_called();
@@ -43,16 +45,13 @@ async fn should_fail_when_sending_sms() {
     };
 
     // when
-    sms_cli::sms_send::send_sms(send_args, &server.url()).await;
+    let result = sms_cli::sms_send::send_sms(send_args, &server.url()).await;
 
     // then
-    // FIXME: I have changed api and we do not return error now because evry method hndler know what to do with errors (tey just print it)
-    // Either we need single behaviour so that all handlers will return result and main function will print it
-    // or we keep it as it is
-    // assert!(matches!(
-    //     result,
-    //     Err(SmsError::UnknownError(x)) if x ==
-    //         "Service didn't confirmed successful send"
-    // ));
+    assert!(matches!(
+        result,
+        Err(output) if output.contains(
+            "Service didn't confirmed successful send")
+    ));
     mock_handler.assert_called();
 }
