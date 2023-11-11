@@ -1,128 +1,139 @@
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
-use surrealdb::{
-    engine::local::Db,
-    sql::{Id, Thing},
-    Surreal,
-};
+use surrealdb::{engine::local::Db, sql::Thing, Surreal};
 
-use crate::AnyRecord;
 use std::marker::PhantomData;
+
+pub trait RecordEntity: Serialize + for<'de> Deserialize<'de> {
+    fn table_name() -> &'static str;
+    fn random_id() -> Thing {
+        Thing {
+            tb: Self::table_name().into(),
+            id: surrealdb::sql::Id::rand(),
+        }
+    }
+    fn id(&self) -> &Thing;
+}
+
+#[derive(Debug, Deserialize)]
+struct AnyRecord {
+    #[allow(dead_code)]
+    id: Thing,
+}
 
 pub struct SmsRepository<T> {
     db: Rc<Surreal<Db>>,
-    table_name: String,
     phantom: PhantomData<T>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TestData {
-    pub id: Option<Thing>,
-    pub field: String,
-    pub name: String,
-}
-
-impl TestData {
-    pub fn new(field: String, name: String) -> Self {
-        Self {
-            id: None,
-            field,
-            name,
-        }
-    }
 }
 
 impl<T> SmsRepository<T>
 where
-    T: Serialize + for<'de> Deserialize<'de>,
+    T: RecordEntity,
 {
-    pub fn new(db_ref: Rc<Surreal<Db>>, table_name: &str) -> Self {
+    pub fn new(db_ref: Rc<Surreal<Db>>) -> Self {
         Self {
             db: db_ref,
-            table_name: table_name.to_string(),
             phantom: PhantomData,
         }
     }
     pub async fn create(&self, record: T) -> Result<T, String> {
         let created: T = self
             .db
-            //TODO: fnd way o add id or ho do you parse it with record?
-            .create(&self.table_name)
+            .create(T::table_name())
             .content(record)
             .await
             .map(|x| x.into_iter().next().expect("Failed to create"))
-            .map_err(|e| format!("Could not create {}. Reason {}", self.table_name, e))?;
+            .map_err(|e| format!("Could not create {}. Reason {}", T::table_name(), e))?;
         Ok(created)
     }
 
-    //TODO: define id!
-    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    pub async fn delete(&self, id: &Thing) -> Result<(), String> {
         let _: AnyRecord = self
             .db
-            .delete((&self.table_name, id))
+            .delete(id)
             .await
-            .map_err(|e| {
-                format!(
-                    "Could not delete record of id '{}' from table: '{}', Reason: {}",
-                    id, self.table_name, e
-                )
-            })?
+            .map_err(|e| format!("Could not delete record of id '{}', Reason: {}", id, e))?
             .ok_or_else(|| {
                 format!(
-                    "Could not delete record of id '{}' from table: '{}', Reason: Record not found",
-                    id, self.table_name
+                    "Could not delete record of id '{}', Reason: Record not found",
+                    id
                 )
             })?;
         Ok(())
     }
-    pub async fn getv2(&self, id: &Thing) -> Result<Option<T>, String> {
-        self.db.select(id).await.map_err(|e| {
-            format!(
-                "Could not get record with id: '{}' from table '{}', Reason: {}",
-                id, self.table_name, e
-            )
-        })
+
+    pub async fn find_one_by_field(
+        &self,
+        field_name: &str,
+        field_value: &str,
+    ) -> Result<Option<T>, String> {
+        let records = self.find_by_field(field_name, field_value).await?;
+        if records.len() > 1 {
+            return Err(format!(
+                "More than one record with field: '{}' of value '{}' found",
+                field_name, field_value
+            ));
+        }
+        Ok(records.into_iter().next())
     }
-    //TODO: define id!
-    pub async fn get(&self, id: &str) -> Result<Option<T>, String> {
-        self.db
-            .select((&self.table_name, id.clone()))
+
+    pub async fn find_by_field(
+        &self,
+        field_name: &str,
+        field_value: &str,
+    ) -> Result<Vec<T>, String> {
+        let mut result = self
+            .db
+            .query("SELECT * FROM type::table($table) WHERE type::field($field_name) = $field_value")
+            .bind(("table", T::table_name()))
+            .bind(("field_name", field_name))
+            .bind(("field_value", field_value))
             .await
             .map_err(|e| {
                 format!(
-                    "Could not get record with id: '{}' from table '{}', Reason: {}",
-                    id, self.table_name, e
+                    "Fail to execute query to find records with field: '{}' of value '{}', Reason: {}",
+                    field_name, field_value, e
                 )
-            })
+            })?;
+
+        result.take::<Vec<T>>(0).map_err(|e| {
+            format!(
+                "Could not find records with field: '{}' of value '{}', Reason: {}",
+                field_name, field_value, e
+            )
+        })
+    }
+
+    pub async fn get(&self, id: &Thing) -> Result<Option<T>, String> {
+        self.db
+            .select(id)
+            .await
+            .map_err(|e| format!("Could not get record with id: '{}', Reason: {}", id, e))
     }
 
     pub async fn get_all(&self) -> Result<Vec<T>, String> {
-        self.db.select(&self.table_name).await.map_err(|e| {
+        self.db.select(T::table_name()).await.map_err(|e| {
             format!(
                 "Could not get all records from table '{}', Reason: {}",
-                self.table_name, e
+                T::table_name(),
+                e
             )
         })
     }
 
-    //TODO: define id!
-    pub async fn update(&self, id: &str, record: T) -> Result<(), String> {
-        let _: Vec<Option<AnyRecord>> = self
+    pub async fn update(&self, record: T) -> Result<(), String> {
+        let id = record.id().clone();
+        let _: Option<T> = self
             .db
-            .update((&self.table_name, id))
+            .update(record.id())
             .content(record)
             .await
-            .map_err(|e| {
-                format!(
-                    "Could not update record with id '{}' in table '{}'. Reason {}",
-                    id, self.table_name, e
-                )
-            })?
+            .map_err(|e| format!("Could not update record with id '{}'. Reason {}", id, e))?
             .ok_or_else(|| {
                 format!(
-                    "Could not update record of id '{}' in table: '{}', Reason: Record not found",
-                    id, self.table_name
+                    "Could not update record of id '{}', Reason: Record not found",
+                    id
                 )
             })?;
         Ok(())

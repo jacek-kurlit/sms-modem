@@ -1,6 +1,6 @@
 use crate::args_parser::ContactsCommands;
 use prettytable::row;
-use sms_db::{contacts_repo::*, RepositoriesManager};
+use sms_db::{contacts::*, RecordEntity, RepositoriesManager};
 
 pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
     match cmd {
@@ -52,11 +52,14 @@ async fn handle_create_contact(
 
 async fn handle_delete_contact(contact_name: String) -> Result<String, String> {
     println!("Deleting contact with name: {}", contact_name);
-    //FIXME: contact could have been assignted to group!
-    RepositoriesManager::new()
+    //FIXME: connection between contacts and groups could be resolved by using graph edges
+    let contacts = RepositoriesManager::new().await?.contacts();
+    let contact_to_delete = contacts
+        .find_by_contact_name(&contact_name)
         .await?
-        .contacts()
-        .delete(&contact_name)
+        .ok_or_else(|| format!("Contact with name: {} not found", contact_name))?;
+    contacts
+        .delete(contact_to_delete.id())
         .await
         .map(|_| "Contact deleted".to_string())
 }
@@ -66,10 +69,10 @@ async fn handle_get_contact(contact_name: String) -> Result<String, String> {
     RepositoriesManager::new()
         .await?
         .contacts()
-        .get(&contact_name)
+        .find_by_contact_name(&contact_name)
         .await?
-        .map(|contact| render_contact_table(vec![contact]))
         .ok_or_else(|| format!("Contact with name: {} not found", contact_name))
+        .map(|contact| render_contact_table(vec![contact]))
 }
 
 async fn handle_list_contacts() -> Result<String, String> {
@@ -93,15 +96,19 @@ async fn handle_update_contact(
         "Updating contact with name {} and setting fields to first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
         contact_name,first_name, surname_name, phone, new_contact_name
     );
-    //FIXME: contact could have been assignted to group!
-    // instead of using contact name we should use db ids!
-    RepositoriesManager::new()
+    let contacts_repo = RepositoriesManager::new().await?.contacts();
+    let contact = contacts_repo
+        .find_by_contact_name(&contact_name)
         .await?
-        .contacts()
-        .update(
-            &contact_name,
-            Contact::new(first_name, surname_name, phone, new_contact_name),
-        )
+        .ok_or_else(|| format!("Contact with name: {} not found", contact_name))?;
+    contacts_repo
+        .update(Contact::new_with_id(
+            contact.id,
+            first_name,
+            surname_name,
+            phone,
+            new_contact_name,
+        ))
         .await
         .map(|_| "Contact updated".to_string())
 }
