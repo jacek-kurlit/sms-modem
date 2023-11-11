@@ -5,6 +5,9 @@ Currently working on Alcatel USB dongle
 
 ## Roadmap
 
-- [ ] Make sure to use db ids for relations between repositories.
+- [x] Make sure to use db ids for relations between repositories.
 For example if contact were change and it was assigned to some group(s)
-- [ ] Try to replace all repositories with one generic implementation.
+- [x] Try to replace all repositories with one generic implementation.
+- [ ] Make sms_cli to use static references to configuration and db
+to be reused across whole app (probably need static lazy crate)
+- [ ] make sms_api to handle Mock and Alcatel providers

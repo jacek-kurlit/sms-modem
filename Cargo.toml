@@ -1,2 +1,2 @@
 [workspace]
-members = ["sms_api", "sms_cli", "sms_db"]
+members = ["sms_api", "sms_cli", "sms_db", "sms_config"]

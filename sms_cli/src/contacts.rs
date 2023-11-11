@@ -64,6 +64,7 @@ async fn handle_delete_contact(contact_name: String) -> Result<String, String> {
 }
 
 async fn handle_get_contact(contact_name: String) -> Result<String, String> {
+    //FIXME: we have problem with contacts that have same name, we need to figure out how to refer them by id
     println!("Getting contact with name: {}", contact_name);
     RepositoriesManager::new()
         .await?

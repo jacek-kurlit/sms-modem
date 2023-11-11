@@ -5,6 +5,7 @@ edition = "2021"
 
 
 [dependencies]
-serde = { version = "1.0.189", features = ["derive"] }
+sms_config = { path = "../sms_config" }
+serde = { version = "1", features = ["derive"] }
 surrealdb = { version = "1.0.0", features = ["kv-rocksdb"] }
 tokio = { version = "1.33.0", features = ["macros", "rt-multi-thread"] }
