@@ -52,7 +52,6 @@ async fn handle_create_contact(
 
 async fn handle_delete_contact(contact_name: String) -> Result<String, String> {
     println!("Deleting contact with name: {}", contact_name);
-    //FIXME: connection between contacts and groups could be resolved by using graph edges
     let contacts = RepositoriesManager::new().await?.contacts();
     let contact_to_delete = contacts
         .find_by_contact_name(&contact_name)

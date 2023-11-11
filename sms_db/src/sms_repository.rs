@@ -23,7 +23,7 @@ struct AnyRecord {
 }
 
 pub struct SmsRepository<T> {
-    db: Rc<Surreal<Db>>,
+    pub db: Rc<Surreal<Db>>,
     phantom: PhantomData<T>,
 }
 
