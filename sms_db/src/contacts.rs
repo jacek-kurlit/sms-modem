@@ -68,4 +68,60 @@ impl SmsRepository<Contact> {
     ) -> Result<Option<Contact>, String> {
         self.find_one_by_field("contact_name", contact_name).await
     }
+
+    pub async fn find_all_by_contact_name(
+        &self,
+        contact_name: &str,
+    ) -> Result<Vec<Contact>, String> {
+        self.find_by_field("contact_name", contact_name).await
+    }
+
+    pub async fn find_exatcly_one_by_contact_name(
+        &self,
+        contact_name: &str,
+        index: Option<usize>,
+    ) -> Result<Contact, String> {
+        let contacts = self.find_by_field("contact_name", contact_name).await?;
+        let number_of_contacts = contacts.len();
+        if contacts.is_empty() {
+            return Err(format!(
+                "Could not find contact with name: '{}'",
+                contact_name
+            ));
+        }
+        if number_of_contacts > 1 && index.is_none() {
+            return Err(format!(
+                "Expected to find exactly one contact with name: '{}', but found {}. Use index to refer correct one",
+                contact_name,
+            number_of_contacts
+            ));
+        }
+        let index = index.unwrap_or(0);
+        contacts.into_iter().nth(index).ok_or_else(|| {
+            format!(
+                "Could not find contact with name: '{}' at index {} out of {} contacts available",
+                contact_name, index, number_of_contacts
+            )
+        })
+    }
+
+    pub async fn find_all_or_select_at_index(
+        &self,
+        contact_name: &str,
+        index: Option<usize>,
+    ) -> Result<Vec<Contact>, String> {
+        let contacts = self.find_all_by_contact_name(contact_name).await?;
+        if contacts.is_empty() {
+            return Ok(vec![]);
+        }
+        if let Some(index) = index {
+            Ok(contacts
+                .into_iter()
+                .nth(index)
+                .map(|c| vec![c])
+                .unwrap_or_default())
+        } else {
+            Ok(contacts)
+        }
+    }
 }

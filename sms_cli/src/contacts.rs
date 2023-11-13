@@ -1,4 +1,4 @@
-use crate::args_parser::ContactsCommands;
+use crate::args_parser::{ContactTargetArgs, ContactUpdateArgs, ContactsCommands};
 use prettytable::row;
 use sms_db::{contacts::*, RecordEntity, RepositoriesManager};
 
@@ -10,25 +10,10 @@ pub async fn manage_contacts(cmd: ContactsCommands) -> Result<String, String> {
             phone,
             contact_name,
         } => handle_create_contact(first_name, surname_name, phone, contact_name).await,
-        ContactsCommands::Delete { contact_name } => handle_delete_contact(contact_name).await,
-        ContactsCommands::Get { contact_name } => handle_get_contact(contact_name).await,
+        ContactsCommands::Delete(contact_target) => handle_delete_contact(contact_target).await,
+        ContactsCommands::Get(contact_target) => handle_get_contact(contact_target).await,
         ContactsCommands::List => handle_list_contacts().await,
-        ContactsCommands::Update {
-            contact_name,
-            first_name,
-            surname_name,
-            phone,
-            new_contact_name,
-        } => {
-            handle_update_contact(
-                contact_name,
-                first_name,
-                surname_name,
-                phone,
-                new_contact_name,
-            )
-            .await
-        }
+        ContactsCommands::Update(update_args) => handle_update_contact(update_args).await,
     }
 }
 
@@ -50,29 +35,28 @@ async fn handle_create_contact(
         .map(|_| "Contact created".to_string())
 }
 
-async fn handle_delete_contact(contact_name: String) -> Result<String, String> {
+async fn handle_delete_contact(target_contact: ContactTargetArgs) -> Result<String, String> {
+    let contact_name = target_contact.contact_name;
     println!("Deleting contact with name: {}", contact_name);
     let contacts = RepositoriesManager::new().await?.contacts();
-    let contact_to_delete = contacts
-        .find_by_contact_name(&contact_name)
-        .await?
-        .ok_or_else(|| format!("Contact with name: {} not found", contact_name))?;
+    let contacts_to_delete = contacts
+        .find_exatcly_one_by_contact_name(&contact_name, target_contact.index)
+        .await?;
     contacts
-        .delete(contact_to_delete.id())
+        .delete(contacts_to_delete.id())
         .await
         .map(|_| "Contact deleted".to_string())
 }
 
-async fn handle_get_contact(contact_name: String) -> Result<String, String> {
-    //FIXME: we have problem with contacts that have same name, we need to figure out how to refer them by id
+async fn handle_get_contact(target_contact: ContactTargetArgs) -> Result<String, String> {
+    let contact_name = target_contact.contact_name;
     println!("Getting contact with name: {}", contact_name);
-    RepositoriesManager::new()
+    let contacts = RepositoriesManager::new()
         .await?
         .contacts()
-        .find_by_contact_name(&contact_name)
-        .await?
-        .ok_or_else(|| format!("Contact with name: {} not found", contact_name))
-        .map(|contact| render_contact_table(vec![contact]))
+        .find_all_or_select_at_index(&contact_name, target_contact.index)
+        .await?;
+    Ok(render_contact_table(contacts))
 }
 
 async fn handle_list_contacts() -> Result<String, String> {
@@ -85,22 +69,22 @@ async fn handle_list_contacts() -> Result<String, String> {
     Ok(render_contact_table(contacts))
 }
 
-async fn handle_update_contact(
-    contact_name: String,
-    first_name: String,
-    surname_name: String,
-    phone: String,
-    new_contact_name: Option<String>,
-) -> Result<String, String> {
+async fn handle_update_contact(update_args: ContactUpdateArgs) -> Result<String, String> {
+    let ContactUpdateArgs {
+        contact_target,
+        first_name,
+        surname_name,
+        phone,
+        new_contact_name,
+    } = update_args;
     println!(
         "Updating contact with name {} and setting fields to first_name: {}, surname_name: {}, phone: {}, contact name: {:?}",
-        contact_name,first_name, surname_name, phone, new_contact_name
+        contact_target.contact_name,first_name, surname_name, phone, new_contact_name
     );
     let contacts_repo = RepositoriesManager::new().await?.contacts();
     let contact = contacts_repo
-        .find_by_contact_name(&contact_name)
-        .await?
-        .ok_or_else(|| format!("Contact with name: {} not found", contact_name))?;
+        .find_exatcly_one_by_contact_name(&contact_target.contact_name, contact_target.index)
+        .await?;
     contacts_repo
         .update(Contact::new_with_id(
             contact.id,
@@ -115,9 +99,16 @@ async fn handle_update_contact(
 
 fn render_contact_table(contacts: Vec<Contact>) -> String {
     let mut table = prettytable::Table::new();
-    table.add_row(row!["Contact Name", "First Name", "Surname Name", "Phone"]);
-    for contact in contacts {
+    table.add_row(row![
+        "#",
+        "Contact Name",
+        "First Name",
+        "Surname Name",
+        "Phone"
+    ]);
+    for (index, contact) in contacts.into_iter().enumerate() {
         table.add_row(row![
+            index,
             contact.contact_name,
             contact.first_name,
             contact.surname_name,

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
 
-use crate::sms_repository::{RecordEntity, SmsRepository};
+use crate::sms_repository::RecordEntity;
 
 const TEMPLATE_TABLE: &str = "template";
 
@@ -13,9 +13,13 @@ pub struct Template {
 }
 
 impl Template {
+    pub fn id_from_name(name: &str) -> Thing {
+        Self::id_from_str(name)
+    }
+
     pub fn new(name: String, text: String) -> Self {
         Self {
-            id: Self::random_id(),
+            id: Self::id_from_name(&name),
             name,
             text,
         }
@@ -29,11 +33,5 @@ impl RecordEntity for Template {
 
     fn id(&self) -> &Thing {
         &self.id
-    }
-}
-
-impl SmsRepository<Template> {
-    pub async fn find_one_by_name(&self, name: &str) -> Result<Option<Template>, String> {
-        self.find_one_by_field("name", name).await
     }
 }

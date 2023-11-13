@@ -30,19 +30,34 @@ pub enum ContactsCommands {
         contact_name: Option<String>,
     },
     #[command(arg_required_else_help = true, about = "Delete contact")]
-    Delete { contact_name: String },
+    Delete(ContactTargetArgs),
     #[command(arg_required_else_help = true, about = "Get contact")]
-    Get { contact_name: String },
+    Get(ContactTargetArgs),
     #[command(arg_required_else_help = true, about = "Update contact")]
-    Update {
-        contact_name: String,
-        first_name: String,
-        surname_name: String,
-        phone: String,
-        new_contact_name: Option<String>,
-    },
+    Update(ContactUpdateArgs),
     #[command(about = "List all contacts")]
     List,
+}
+
+#[derive(Debug, Args, Clone)]
+pub struct ContactTargetArgs {
+    pub contact_name: String,
+    #[arg(
+        short,
+        help = "If many contacts have the same name, select one by index. Index starts from 0"
+    )]
+    pub index: Option<usize>,
+}
+
+#[derive(Debug, Args)]
+#[command()]
+pub struct ContactUpdateArgs {
+    #[command(flatten)]
+    pub contact_target: ContactTargetArgs,
+    pub first_name: String,
+    pub surname_name: String,
+    pub phone: String,
+    pub new_contact_name: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -54,17 +69,19 @@ pub enum GroupsCommands {
     #[command(arg_required_else_help = true, about = "Get group")]
     Get { name: String },
     #[command(arg_required_else_help = true, about = "Assign concat to group")]
-    Assign {
-        contact_name: String,
-        group_name: String,
-    },
+    Assign(AssignGroupArgs),
     #[command(arg_required_else_help = true, about = "Unassign concat from group")]
-    Unassign {
-        contact_name: String,
-        group_name: String,
-    },
+    Unassign(AssignGroupArgs),
     #[command(about = "List all groups")]
     List,
+}
+
+#[derive(Debug, Args)]
+#[command()]
+pub struct AssignGroupArgs {
+    pub group_name: String,
+    #[command(flatten)]
+    pub contact_target: ContactTargetArgs,
 }
 
 #[derive(Debug, Subcommand)]
@@ -100,9 +117,9 @@ pub struct SmsTargetArgs {
     #[arg(short)]
     pub number: Option<String>,
     #[arg(short)]
-    pub contact_alias: Option<String>,
+    pub contact_name: Option<String>,
     #[arg(short)]
-    pub group_alias: Option<String>,
+    pub group_name: Option<String>,
 }
 
 #[derive(Debug, Args, Clone)]

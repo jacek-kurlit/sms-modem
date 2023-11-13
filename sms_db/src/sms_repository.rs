@@ -7,12 +7,21 @@ use std::marker::PhantomData;
 
 pub trait RecordEntity: Serialize + for<'de> Deserialize<'de> {
     fn table_name() -> &'static str;
+
     fn random_id() -> Thing {
         Thing {
             tb: Self::table_name().into(),
             id: surrealdb::sql::Id::rand(),
         }
     }
+
+    fn id_from_str(id: &str) -> Thing {
+        Thing {
+            tb: Self::table_name().into(),
+            id: surrealdb::sql::Id::String(id.into()),
+        }
+    }
+
     fn id(&self) -> &Thing;
 }
 
@@ -37,6 +46,7 @@ where
             phantom: PhantomData,
         }
     }
+
     pub async fn create(&self, record: T) -> Result<T, String> {
         let created: T = self
             .db

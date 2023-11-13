@@ -22,9 +22,13 @@ pub struct GroupDetails {
 }
 
 impl Group {
+    pub fn id_from_name(name: &str) -> Thing {
+        Self::id_from_str(name)
+    }
+
     pub fn new(name: String) -> Self {
         Self {
-            id: Self::random_id(),
+            id: Self::id_from_name(&name),
             name,
         }
     }
@@ -41,10 +45,6 @@ impl RecordEntity for Group {
 }
 
 impl SmsRepository<Group> {
-    pub async fn find_one_by_name(&self, name: &str) -> Result<Option<Group>, String> {
-        self.find_one_by_field("name", name).await
-    }
-
     pub async fn find_group_details(
         &self,
         group_id: &Thing,

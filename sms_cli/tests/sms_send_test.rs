@@ -9,8 +9,8 @@ async fn should_send_sms_successfully() {
     let send_args = SendSmsArgs {
         to: SmsTargetArgs {
             number: Some("123456789".to_string()),
-            contact_alias: None,
-            group_alias: None,
+            contact_name: None,
+            group_name: None,
         },
         message: SmsMessageArgs {
             plain: Some("Hello world".to_string()),
@@ -35,8 +35,8 @@ async fn should_fail_when_sending_sms() {
     let send_args = SendSmsArgs {
         to: SmsTargetArgs {
             number: Some("123456789".to_string()),
-            contact_alias: None,
-            group_alias: None,
+            contact_name: None,
+            group_name: None,
         },
         message: SmsMessageArgs {
             plain: Some("Hello world".to_string()),

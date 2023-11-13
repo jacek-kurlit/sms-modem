@@ -1,5 +1,5 @@
 use prettytable::row;
-use sms_db::{templates::Template, RecordEntity, RepositoriesManager};
+use sms_db::{templates::Template, RepositoriesManager};
 
 use crate::args_parser::TemplatesCommands;
 
@@ -23,13 +23,10 @@ async fn handle_create_template(name: String, text: String) -> Result<String, St
 }
 
 async fn handle_delete_template(name: String) -> Result<String, String> {
-    let templates = RepositoriesManager::new().await?.templates();
-    let persisted_template = templates
-        .find_one_by_name(&name)
+    RepositoriesManager::new()
         .await?
-        .ok_or_else(|| format!("Template with name: {} not found", name))?;
-    templates
-        .delete(persisted_template.id())
+        .templates()
+        .delete(&Template::id_from_name(&name))
         .await
         .map(|_| "Template deleted successfully".to_string())
 }
@@ -38,7 +35,7 @@ async fn handle_get_template(name: String) -> Result<String, String> {
     RepositoriesManager::new()
         .await?
         .templates()
-        .find_one_by_name(&name)
+        .get(&Template::id_from_name(&name))
         .await?
         .map(|template| render_templates_table(vec![template]))
         .ok_or_else(|| format!("Template with name {} not found", name))
