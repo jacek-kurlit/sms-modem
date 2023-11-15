@@ -1,5 +1,5 @@
 use prettytable::row;
-use sms_db::{templates::Template, RepositoriesManager};
+use sms_db::{repository, templates::Template};
 
 use crate::args_parser::TemplatesCommands;
 
@@ -14,27 +14,21 @@ pub async fn manage_templates(cmd: TemplatesCommands) -> Result<String, String> 
 }
 
 async fn handle_create_template(name: String, text: String) -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .templates()
+    repository::templates()
         .create(Template::new(name, text))
         .await
         .map(|_| "Template created successfully".to_string())
 }
 
 async fn handle_delete_template(name: String) -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .templates()
+    repository::templates()
         .delete(&Template::id_from_name(&name))
         .await
         .map(|_| "Template deleted successfully".to_string())
 }
 
 async fn handle_get_template(name: String) -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .templates()
+    repository::templates()
         .get(&Template::id_from_name(&name))
         .await?
         .map(|template| render_templates_table(vec![template]))
@@ -42,9 +36,7 @@ async fn handle_get_template(name: String) -> Result<String, String> {
 }
 
 async fn handle_list_templates() -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .templates()
+    repository::templates()
         .get_all()
         .await
         .map(render_templates_table)
@@ -60,9 +52,7 @@ fn render_templates_table(templates: Vec<Template>) -> String {
 }
 
 async fn handle_update_template(name: String, text: String) -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .templates()
+    repository::templates()
         .update(Template::new(name, text))
         .await
         .map(|_| "Template updated successfully".to_string())

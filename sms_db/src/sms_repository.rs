@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::local::Db, sql::Thing, Surreal};
 
@@ -31,16 +29,16 @@ struct AnyRecord {
     id: Thing,
 }
 
-pub struct SmsRepository<T> {
-    pub db: Rc<Surreal<Db>>,
+pub struct SmsRepository<'a, T> {
+    pub db: &'a Surreal<Db>,
     phantom: PhantomData<T>,
 }
 
-impl<T> SmsRepository<T>
+impl<'a, T> SmsRepository<'a, T>
 where
     T: RecordEntity,
 {
-    pub fn new(db_ref: Rc<Surreal<Db>>) -> Self {
+    pub fn new(db_ref: &'a Surreal<Db>) -> Self {
         Self {
             db: db_ref,
             phantom: PhantomData,

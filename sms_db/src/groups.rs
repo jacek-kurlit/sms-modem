@@ -44,7 +44,7 @@ impl RecordEntity for Group {
     }
 }
 
-impl SmsRepository<Group> {
+impl<'a> SmsRepository<'a, Group> {
     pub async fn find_group_details(
         &self,
         group_id: &Thing,

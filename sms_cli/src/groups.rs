@@ -1,7 +1,7 @@
 use prettytable::row;
 use sms_db::{
     groups::{Group, GroupDetails},
-    RecordEntity, RepositoriesManager,
+    repository,
 };
 
 use crate::args_parser::{AssignGroupArgs, GroupsCommands};
@@ -18,18 +18,14 @@ pub async fn manage_groups(cmd: GroupsCommands) -> Result<String, String> {
 }
 
 async fn handle_create_group(name: String) -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .groups()
+    repository::groups()
         .create(Group::new(name))
         .await
         .map(|_| "Group created successfully".to_string())
 }
 
 async fn handle_delete_group(name: String) -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .groups()
+    repository::groups()
         .delete(&Group::id_from_name(&name))
         .await
         .map(|_| "Group deleted successfully".to_string())
@@ -37,9 +33,7 @@ async fn handle_delete_group(name: String) -> Result<String, String> {
 
 async fn handle_get_group(name: String) -> Result<String, String> {
     let group_id = Group::id_from_name(&name);
-    let details = RepositoriesManager::new()
-        .await?
-        .groups()
+    let details = repository::groups()
         .find_group_details(&group_id)
         .await?
         .ok_or_else(|| {
@@ -71,27 +65,19 @@ fn render_group_table(groups: Vec<Group>) -> String {
 }
 
 async fn handle_list_groups() -> Result<String, String> {
-    RepositoriesManager::new()
-        .await?
-        .groups()
-        .get_all()
-        .await
-        .map(render_group_table)
+    repository::groups().get_all().await.map(render_group_table)
 }
 
 async fn handle_group_assign(assignment_args: AssignGroupArgs) -> Result<String, String> {
-    let repository_manager = RepositoriesManager::new().await?;
-    let persisted_contact = repository_manager
-        .contacts()
-        .find_exatcly_one_by_contact_name(
+    let persisted_contact = repository::contacts()
+        .find_exactly_one_by_contact_name(
             &assignment_args.contact_target.contact_name,
             assignment_args.contact_target.index,
         )
         .await?;
-    repository_manager
-        .groups()
+    repository::groups()
         .assign_contact(
-            persisted_contact.id(),
+            &persisted_contact.id,
             &Group::id_from_name(&assignment_args.group_name),
         )
         .await
@@ -99,18 +85,15 @@ async fn handle_group_assign(assignment_args: AssignGroupArgs) -> Result<String,
 }
 
 async fn handle_group_unassign(assignment_args: AssignGroupArgs) -> Result<String, String> {
-    let repository_manager = RepositoriesManager::new().await?;
-    let persited_contact = repository_manager
-        .contacts()
-        .find_exatcly_one_by_contact_name(
+    let persited_contact = repository::contacts()
+        .find_exactly_one_by_contact_name(
             &assignment_args.contact_target.contact_name,
             assignment_args.contact_target.index,
         )
         .await?;
-    repository_manager
-        .groups()
+    repository::groups()
         .unassign_contact(
-            persited_contact.id(),
+            &persited_contact.id,
             &Group::id_from_name(&assignment_args.group_name),
         )
         .await

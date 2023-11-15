@@ -61,7 +61,7 @@ impl Contact {
     pub fn update(&mut self) {}
 }
 
-impl SmsRepository<Contact> {
+impl<'a> SmsRepository<'a, Contact> {
     pub async fn find_by_contact_name(
         &self,
         contact_name: &str,
@@ -76,7 +76,7 @@ impl SmsRepository<Contact> {
         self.find_by_field("contact_name", contact_name).await
     }
 
-    pub async fn find_exatcly_one_by_contact_name(
+    pub async fn find_exactly_one_by_contact_name(
         &self,
         contact_name: &str,
         index: Option<usize>,
@@ -91,9 +91,9 @@ impl SmsRepository<Contact> {
         }
         if number_of_contacts > 1 && index.is_none() {
             return Err(format!(
-                "Expected to find exactly one contact with name: '{}', but found {}. Use index to refer correct one",
+                "Expected to find exactly one contact with name: '{}', but found {}. Use index to refer to the correct one",
                 contact_name,
-            number_of_contacts
+                number_of_contacts
             ));
         }
         let index = index.unwrap_or(0);
