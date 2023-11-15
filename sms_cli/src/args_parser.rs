@@ -111,7 +111,7 @@ pub struct SendSmsArgs {
 #[clap(group(
     clap::ArgGroup::new("target")
         .required(true)
-        .args(&["number","contact_alias", "group_alias"]),
+        .args(&["number","contact_name", "group_name"]),
 ))]
 pub struct SmsTargetArgs {
     #[arg(short)]

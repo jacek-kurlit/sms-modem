@@ -1,6 +1,6 @@
 pub use mockito;
 
-pub async fn sending_sms_is_successful(server: &mut mockito::Server) -> SendSmsMock {
+pub async fn sending_sms_is_successful(server: &mut mockito::Server) -> AlcatelMock {
     let mock_send = server
         .mock("POST", "/jrd/webapi?api=SendSMS")
         .with_status(200)
@@ -15,13 +15,15 @@ pub async fn sending_sms_is_successful(server: &mut mockito::Server) -> SendSmsM
         .create_async()
         .await;
 
-    SendSmsMock {
+    AlcatelMock {
         mock_send,
         mock_get_status,
     }
 }
 
-pub async fn sending_sms_failure(server: &mut mockito::Server) -> SendSmsMock {
+pub const MAX_RETRIES: usize = 3;
+
+pub async fn sending_sms_failure(server: &mut mockito::Server) -> AlcatelMock {
     let mock_send = server
         .mock("POST", "/jrd/webapi?api=SendSMS")
         .with_status(200)
@@ -33,21 +35,21 @@ pub async fn sending_sms_failure(server: &mut mockito::Server) -> SendSmsMock {
         .with_status(200)
         .with_body(r#"{ "jsonrpc": "2.0", "result": { "SendStatus": 1 }, "id": "6.7" }"#)
         .with_header("content-type", "application/json")
-        .expect(crate::RETRY_COUNT)
+        .expect(MAX_RETRIES)
         .create_async()
         .await;
 
-    SendSmsMock {
+    AlcatelMock {
         mock_send,
         mock_get_status,
     }
 }
-pub struct SendSmsMock {
+pub struct AlcatelMock {
     mock_send: mockito::Mock,
     mock_get_status: mockito::Mock,
 }
 
-impl SendSmsMock {
+impl AlcatelMock {
     pub fn assert_called(&self) {
         self.mock_send.assert();
         self.mock_get_status.assert();

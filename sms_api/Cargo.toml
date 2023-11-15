@@ -8,6 +8,8 @@ edition = "2021"
 sms_mock_api = ["mockito"]
 
 [dependencies]
+sms_config = { path = "../sms_config" }
+async-trait = "0.1"
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }

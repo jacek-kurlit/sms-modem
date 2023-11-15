@@ -1,5 +1,6 @@
 use sms_api::sms_mock_api::{self, mockito};
 use sms_cli::args_parser::{SendSmsArgs, SmsMessageArgs, SmsTargetArgs};
+use sms_config::config::SmsApiConf;
 
 #[tokio::test]
 async fn should_send_sms_successfully() {
@@ -17,9 +18,16 @@ async fn should_send_sms_successfully() {
             template: None,
         },
     };
+    let sms_api_config = SmsApiConf {
+        provider: sms_config::config::SmsApiProvider::Alcatel {
+            url: server.url(),
+            retry_count: 3,
+            retry_delay: 50,
+        },
+    };
 
     // when
-    sms_cli::sms_send::send_sms(send_args, &server.url())
+    sms_cli::sms_send::send_sms(send_args, &sms_api_config)
         .await
         .expect("send_sms_successfully");
 
@@ -43,9 +51,16 @@ async fn should_fail_when_sending_sms() {
             template: None,
         },
     };
+    let sms_api_config = SmsApiConf {
+        provider: sms_config::config::SmsApiProvider::Alcatel {
+            url: server.url(),
+            retry_count: sms_mock_api::MAX_RETRIES,
+            retry_delay: 50,
+        },
+    };
 
     // when
-    let result = sms_cli::sms_send::send_sms(send_args, &server.url()).await;
+    let result = sms_cli::sms_send::send_sms(send_args, &sms_api_config).await;
 
     // then
     assert!(matches!(
