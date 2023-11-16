@@ -63,15 +63,12 @@ impl<'a> SmsRepository<'a, Group> {
     }
 
     pub async fn assign_contact(&self, contact_id: &Thing, group_id: &Thing) -> Result<(), String> {
-        let result = self
-            .db
+        self.db
             .query("RELATE $contact_id ->group_assignment-> $group_id")
             .bind(("contact_id", contact_id))
             .bind(("group_id", group_id))
             .await
             .map_err(|e| format!("Could not assign contact to group. Reason: {}", e))?;
-
-        println!("Result: {:?}", result);
 
         Ok(())
     }
@@ -81,15 +78,12 @@ impl<'a> SmsRepository<'a, Group> {
         contact_id: &Thing,
         group_id: &Thing,
     ) -> Result<(), String> {
-        let result = self
-            .db
+        self.db
             .query("DELETE $contact_id->group_assignment WHERE out=$group_id")
             .bind(("contact_id", contact_id))
             .bind(("group_id", group_id))
             .await
             .map_err(|e| format!("Could not unassign contact from group. Reason: {}", e))?;
-
-        println!("Result: {:?}", result);
 
         Ok(())
     }
