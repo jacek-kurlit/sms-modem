@@ -1,7 +1,11 @@
 use clap::Parser;
 use sms_cli::{
     args_parser::{
-        self, Commands::Contacts, Commands::Groups, Commands::Send, Commands::Templates,
+        self,
+        Commands::Contacts,
+        Commands::Send,
+        Commands::Templates,
+        Commands::{Groups, Import},
     },
     contacts,
 };
@@ -15,6 +19,7 @@ async fn main() {
         Templates(commad) => sms_cli::templates::manage_templates(commad).await,
         Groups(command) => sms_cli::groups::manage_groups(command).await,
         Send(send_args) => sms_cli::sms_send::send_sms(send_args, &sms_config::get().sms_api).await,
+        Import(import_commands) => sms_cli::replace::manage_imports(import_commands).await,
     };
     display_action_message(result);
 }

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -18,6 +20,8 @@ pub enum Commands {
     Templates(TemplatesCommands),
     #[command(about = "Send sms")]
     Send(SendSmsArgs),
+    #[command(subcommand, about = "Manage importing resouces")]
+    Import(ImportCommads),
 }
 
 #[derive(Debug, Subcommand)]
@@ -133,4 +137,16 @@ pub struct SmsMessageArgs {
     pub plain: Option<String>,
     #[arg(short)]
     pub template: Option<String>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ImportCommads {
+    #[command(
+        arg_required_else_help = true,
+        about = "Replace all current contacts with contacts from csv file"
+    )]
+    ReplaceContacts {
+        source_csv: PathBuf,
+        group_name: String,
+    },
 }
